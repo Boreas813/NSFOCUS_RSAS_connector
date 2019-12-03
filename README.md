@@ -16,6 +16,3 @@ PS：请cd到项目路径下打开cmd执行文件
 `lvmeng_connector.exe -n "测试任务 2333" -m 1`
      
 `lvmeng_connector.exe -n "测试任务 2333" -m 2 -c "08:00-12:00"`
-
-
-<font color=#F0FFFF>他强由他强，清风拂山岗；他横由他横，明月照大江。他自狠来他自恶，我自一口真气足。</font>
