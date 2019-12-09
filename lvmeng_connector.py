@@ -6,6 +6,7 @@ import time
 import ipaddress
 import configparser
 import optparse
+import json
 
 import requests
 requests.packages.urllib3.disable_warnings()
@@ -65,7 +66,7 @@ def st_print(text):
         text = f'{text}'
         print(text)
 
-def start_host_and_password_scan(username, password, scanner_url, task_name, corn_pattern):
+def start_host_and_password_scan(username, password, scanner_url, task_name, corn_pattern=None):
 
     USERNAME = username
 
@@ -79,6 +80,29 @@ def start_host_and_password_scan(username, password, scanner_url, task_name, cor
     st_print('[+] 正在读取IP地址列表...')
     with open('ip.txt', 'r') as ip_file:
         ip_range = ip_file.read()
+
+
+
+    st_print('[+] 正在进行IP去重...')
+    ip_list = ip_range.split('\n')
+
+    while True:
+        try:
+            ip_list.remove('')
+        except ValueError:
+            break
+
+    ip_list_len = len(ip_list)
+    new_ip_list = list(set(ip_list))
+
+    if len(new_ip_list) < ip_list_len:
+        ip_range = ''
+        for ip in new_ip_list:
+            ip_range += f'{ip}\n'
+        ip_range = ip_range[0:-1]
+        st_print('[*] 检测到重复ip，已经进行去重...')
+
+
 
     st_print('[+] 正在登陆扫描器...')
     # 生成用于登录页面的初始请求头
@@ -274,10 +298,10 @@ def start_host_and_password_scan(username, password, scanner_url, task_name, cor
     if 'suc' in r.text:
         st_print(f'[+] 新建扫描任务成功，任务编号：{r.text.split(":")[2]}')
     else:
-        st_print(f'[!] 新建任务失败，报错信息为：{r.text}')
+        st_print(f'[!] 新建任务失败，报错信息为：{json.loads(r.text[1:-1])}')
 
 
-def start_web_scan(username, password, scanner_url, task_name, corn_pattern):
+def start_web_scan(username, password, scanner_url, task_name, corn_pattern=None):
     USERNAME = username
 
     PASSWORD = password
@@ -296,6 +320,14 @@ def start_web_scan(username, password, scanner_url, task_name, corn_pattern):
             url_list.remove('')
         except ValueError:
             break
+
+    st_print('[+] 正在进行url去重...')
+    url_list_len = len(url_list)
+    new_url_list = list(set(url_list))
+
+    if len(new_url_list) < url_list_len:
+        url_list = new_url_list
+        st_print('[*] 检测到重复url，已经进行去重...')
 
     # 最大上限15个url，需要进行地址拆分
     if len(url_list) > 15:
@@ -357,6 +389,9 @@ def send_a_web_scan_mission(SCANNER_ADDRESS, SCANNER_URL, USERNAME, PASSWORD, ur
             r'csrfmiddlewaretoken":\'(.+)\'', str(i)) else None
         if csrfmiddlewaretoken:
             st_print(f'[+] 获取csrfmiddlewaretoken成功，正在下发第{part}批次任务...')
+            st_print(f'''===扫描参数===
+{task_target}
+''')
             break
     else:
         st_print('[!] 未能定位csrfmiddlewaretoken，新建web扫描任务失败！')
@@ -434,7 +469,7 @@ def send_a_web_scan_mission(SCANNER_ADDRESS, SCANNER_URL, USERNAME, PASSWORD, ur
     if 'suc' in r.text:
         st_print(f'[+] 第{part}批次web扫描任务创建成功，任务编号：{r.text.split(":")[2]}')
     else:
-        st_print(f'[!] 新建web扫描任务失败，报错信息为：{r.text}')
+        st_print(f'[!] 新建web扫描任务失败，报错信息为：{json.loads(r.text[1:-1])}')
         exit(0)
 
 if __name__ == '__main__':
@@ -446,7 +481,7 @@ if __name__ == '__main__':
     4. -n <任务名称>
     5. -m <扫描模式 参数为1时是主机+弱口令扫描 参数为2时是web扫描>
     6. -c <定时执行，选填参数>
-    
+
     实例：lvmeng_connector.exe -n "测试任务 2333" -m 1
          lvmeng_connector.exe -n "测试任务 2333" -m 2 -c "08:00-12:00"
     '''
